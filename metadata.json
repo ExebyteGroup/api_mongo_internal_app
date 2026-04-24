@@ -1,0 +1,6 @@
+{
+  "name": "Customer Manager",
+  "description": "Full-stack Admin Dashboard and REST API built with Node.js, TypeScript, and React, integrated with remote MongoDB.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
