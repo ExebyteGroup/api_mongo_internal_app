@@ -23,7 +23,43 @@ async function startServer() {
     console.log(`${req.method} ${req.url} - Origin: ${req.headers.origin}`);
     next();
   });
-  app.use(cors()); // Allow all origins by default
+  app.use(cors({
+    origin: true,
+    credentials: true
+  }));
+
+  const mcp = new McpServer({
+    name: "Customer_Device_MCP",
+    version: "1.0.0"
+  });
+
+  const mcpTransports = new Map<string, SSEServerTransport>();
+
+  app.get("/mcp/sse", async (req, res) => {
+    try {
+      const transport = new SSEServerTransport("/mcp/messages", res);
+      mcpTransports.set(transport.sessionId, transport);
+      await mcp.connect(transport);
+
+      res.on("close", () => {
+        mcpTransports.delete(transport.sessionId);
+      });
+    } catch (e) {
+      console.error("MCP connect error:", e);
+      if (!res.headersSent) res.status(500).json({ error: String(e) });
+    }
+  });
+
+  app.post("/mcp/messages", (req, res) => {
+    const sessionId = req.query.sessionId as string;
+    const transport = mcpTransports.get(sessionId);
+    if (transport) {
+      transport.handlePostMessage(req, res);
+    } else {
+      res.status(404).json({ error: "MCP Session not found" });
+    }
+  });
+
   app.use(express.json());
 
   // MongoDB Initialization (Non-blocking)
@@ -499,11 +535,6 @@ async function startServer() {
 
 
   // --- MCP SERVER (Model Context Protocol) ---
-  const mcp = new McpServer({
-    name: "Customer_Device_MCP",
-    version: "1.0.0"
-  });
-
   mcp.tool(
     "list_collections",
     "List all available collections in the database",
@@ -562,16 +593,6 @@ async function startServer() {
       return { content: [{ type: "text", text: `Success: Device ${deviceId} assigned to customer ${sifra}.` }] };
     }
   );
-
-  let mcpTransport;
-  app.get("/mcp/sse", (req, res) => {
-    mcpTransport = new SSEServerTransport("/mcp/messages", res);
-    mcp.connect(mcpTransport);
-  });
-  app.post("/mcp/messages", (req, res) => {
-    if (mcpTransport) mcpTransport.handlePostMessage(req, res);
-    else res.status(503).json({ error: "MCP not initialized" });
-  });
 
   // --- VITE MIDDLEWARES (Runs React Dashboard) ---
   if (process.env.NODE_ENV !== "production") {
