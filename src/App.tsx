@@ -17,9 +17,12 @@ import {
   ChevronLeft,
   Filter,
   Download,
-  Edit
+  Edit,
+  Trash2,
+  Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import McpExplorer from './components/McpExplorer';
 
 const AssignDeviceModal = ({ 
   isOpen, 
@@ -99,6 +102,16 @@ const AssignDeviceModal = ({
           </div>
         </div>
         <div className="overflow-y-auto p-2 flex-1">
+          <button
+            onClick={() => onAssign(devicesToAssign.map(d => d.deviceId), '')}
+            className="w-full text-left p-3 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors flex items-center gap-3 text-slate-700 font-medium mb-4 border border-slate-200 border-dashed group"
+          >
+            <div className="p-1.5 rounded-md bg-white border border-slate-200 group-hover:border-red-200 group-hover:bg-red-100 transition-colors">
+               <Trash2 size={16} className="text-slate-400 group-hover:text-red-500" />
+            </div>
+            Remove Assignment
+          </button>
+          
           {loading ? (
             <div className="p-4 text-center text-sm text-slate-400">Searching...</div>
           ) : results.length === 0 ? (
@@ -522,6 +535,26 @@ export default function App() {
     }
   };
 
+  const [deviceToDelete, setDeviceToDelete] = useState<string | null>(null);
+
+  const deleteDevice = async (deviceId: string) => {
+    try {
+      const resp = await fetch(`/api/devices/${deviceId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (resp.ok) {
+        setDeviceToDelete(null);
+        fetchDashboardData();
+      } else {
+        const body = await resp.json();
+        alert(body.error || 'Failed to delete device');
+      }
+    } catch(e) {
+      alert('Error deleting device');
+    }
+  };
+
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
@@ -618,8 +651,7 @@ export default function App() {
       <div className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-72 bg-slate-950 border-r border-slate-800">
           <div className="flex items-center h-20 px-6 bg-slate-950 border-b border-slate-900">
-            <SmartphoneNfc className="text-indigo-500 mr-3 w-8 h-8" />
-            <span className="text-white font-extrabold text-xl tracking-tight">Exebyte</span>
+            <img src="https://exebyte.io/wp-content/uploads/2020/09/exeByte_final_SVG-03.svg" alt="Exebyte" className="h-8 object-contain" />
             <div className="ml-auto w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
           </div>
           <div className="flex-1 flex flex-col overflow-y-auto pt-6 px-4 space-y-8">
@@ -666,6 +698,12 @@ export default function App() {
                   icon={<Database size={20} />} 
                   label="DB Explorer" 
                   onClick={() => setView('database')} 
+                />
+                <NavItem 
+                  active={view === 'mcp'} 
+                  icon={<Play size={20} />} 
+                  label="MCP Explorer" 
+                  onClick={() => setView('mcp')} 
                 />
                 <a 
                   href="/api-docs" 
@@ -1214,6 +1252,16 @@ export default function App() {
                                >
                                  {d.apiKey ? 'Reset Key' : 'Generate Key'}
                                </button>
+                               <button
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setDeviceToDelete(d.deviceId);
+                                 }}
+                                 className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-auto"
+                                 title="Delete Device"
+                               >
+                                 <Trash2 size={16} />
+                               </button>
                             </div>
                          </div>
                       </motion.div>
@@ -1231,6 +1279,8 @@ export default function App() {
                   )}
                 </div>
               )}
+
+              {view === 'mcp' && <McpExplorer token={token} />}
 
               {view.startsWith('table-') && (
                 <div className="space-y-8">
@@ -1379,6 +1429,41 @@ export default function App() {
             onClose={() => setEditRecordModal(null)}
             onSave={fetchDashboardData}
           />
+          
+          {deviceToDelete && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col"
+              >
+                <div className="p-6 text-center">
+                  <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+                    <Trash2 size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Device</h3>
+                  <p className="text-sm text-slate-500">
+                    Are you sure you want to delete this device? This action cannot be undone.
+                  </p>
+                </div>
+                <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+                  <button 
+                    onClick={() => setDeviceToDelete(null)}
+                    className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors w-full"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => deleteDevice(deviceToDelete)}
+                    className="px-4 py-2 text-sm font-bold bg-red-600 text-white hover:bg-red-700 rounded-xl transition-colors w-full"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
         </main>
       </div>
     </div>

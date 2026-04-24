@@ -379,6 +379,17 @@ async function startServer() {
     }
   });
 
+  app.delete('/api/devices/:id', authMiddleware, async (req, res) => {
+    if (!db) return res.status(500).json({ error: 'DB not initialized' });
+    try {
+      const result = await db.collection('devices').deleteOne({ deviceId: req.params.id });
+      if (result.deletedCount === 0) return res.status(404).json({ error: 'Device not found' });
+      res.json({ message: 'Device deleted successfully' });
+    } catch (e) {
+      res.status(500).json({ error: 'Internal error' });
+    }
+  });
+
 
   // --- SWAGGER API DOCS ---
   const swaggerDocument = {
