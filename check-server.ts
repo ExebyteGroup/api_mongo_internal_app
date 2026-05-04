@@ -1,7 +1,7 @@
 import { MongoClient } from 'mongodb';
 
 async function checkServer() {
-  const uri = "mongodb://exebyte-bot.duckdns.org:23416/exebyte?ssl=false&connectTimeoutMS=5000&serverSelectionTimeoutMS=5000";
+  const uri = "mongodb://exebyteApp:qmoxtjU0rM9w5sl7fWIUQ2OyK8qt@exebyte-bot.duckdns.org:23416/exebyte?authSource=exebyte&tls=false";
   console.log("Checking server response without auth...");
   
   try {

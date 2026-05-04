@@ -338,6 +338,7 @@ export default function App() {
     try {
       // Fetch core stats
       const statsResp = await fetch('/api/stats', { headers: { Authorization: `Bearer ${token}` } });
+      if (statsResp.status === 401) { handleLogout(); return; }
       if (statsResp.ok) {
         const stats = await statsResp.json();
         setDashboardStats(stats);
@@ -356,6 +357,7 @@ export default function App() {
       if (view === 'dashboard') {
         const url = `/api/customers?page=${customerPage}&limit=${pageSize}&search=${searchTerm}${sortConfig.field ? `&sortField=${sortConfig.field}&sortOrder=${sortConfig.order}` : ''}`;
         const custResp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (custResp.status === 401) { handleLogout(); return; }
         if (custResp.ok) {
           const body = await custResp.json();
           setCustomers(body.data || []);
@@ -367,6 +369,7 @@ export default function App() {
       if (view === 'devices') {
         const url = `/api/devices?page=${devicePage}&limit=${pageSize}${sortConfig.field ? `&sortField=${sortConfig.field}&sortOrder=${sortConfig.order}` : ''}`;
         const devResp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (devResp.status === 401) { handleLogout(); return; }
         if (devResp.ok) {
           const body = await devResp.json();
           setDevices(body.data || []);
@@ -377,6 +380,7 @@ export default function App() {
 
       if (view === 'database') {
         const colResp = await fetch('/api/db/collections', { headers: { Authorization: `Bearer ${token}` } });
+        if (colResp.status === 401) { handleLogout(); return; }
         if (colResp.ok) {
           const cols = await colResp.json();
           setCollections(cols);
@@ -399,6 +403,7 @@ export default function App() {
         }
 
         const dataResp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (dataResp.status === 401) { handleLogout(); return; }
         if (dataResp.ok) {
           const body = await dataResp.json();
           setCollectionData(body.data || []);
@@ -422,8 +427,12 @@ export default function App() {
       }
 
       fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-        .then(r => r.json())
+        .then(async r => {
+          if (r.status === 401) { handleLogout(); return null; }
+          return r.json();
+        })
         .then(data => {
+          if (!data) return;
           setCollectionData(data.data || []);
           setDbTotalPages(data.meta?.totalPages || 1);
           setTotalDocs(data.meta?.total || 0);
